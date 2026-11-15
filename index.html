@@ -43,11 +43,26 @@
   .cal .ctl{display:flex;align-items:center;gap:10px}
   .cal button{padding:6px 14px;font-size:18px}
   .msg{color:var(--warn);font-size:13px;min-height:18px;margin:6px 2px}
+  .bpm{font-size:72px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+  .dots{display:flex;justify-content:center;gap:10px;margin:14px 0 4px;min-height:22px}
+  .dots i{width:22px;height:22px;border-radius:50%;background:var(--line);transition:background .05s}
+  .dots i.acc{border:2px solid var(--acc)}
+  .dots i.on{background:var(--ok)}
+  .dots i.acc.on{background:var(--acc)}
+  .row button{flex:1}
+  input[type=range]{accent-color:var(--acc)}
 </style>
 </head>
 <body>
 <div class="app">
   <h1>Guitartune <small>Afinador</small></h1>
+
+  <div class="seg" id="viewSeg">
+    <button data-v="tuner" class="on">Afinador</button>
+    <button data-v="metro">Metrónomo</button>
+  </div>
+
+  <div id="tunerView">
 
   <div class="seg" id="catSeg">
     <button data-c="str" class="on">Cuerdas</button>
@@ -96,6 +111,33 @@
       <b id="calV">440 Hz</b>
       <button id="calUp" aria-label="Subir">+</button>
     </span>
+  </div>
+  </div>
+
+  <div id="metroView" style="display:none">
+    <div class="meter">
+      <div class="bpm" id="bpmV">100</div>
+      <div class="es" id="bpmName">Andante</div>
+      <div class="dots" id="dots"></div>
+      <div class="row" style="margin:12px 0 8px">
+        <button id="bpmDn10">−10</button>
+        <button id="bpmDn">−1</button>
+        <button id="bpmUp">+1</button>
+        <button id="bpmUp10">+10</button>
+      </div>
+      <input type="range" id="bpmR" min="30" max="240" value="100" style="width:100%" aria-label="Tempo">
+    </div>
+    <div class="row">
+      <select id="beats" aria-label="Compás">
+        <option value="2">2/4</option>
+        <option value="3">3/4</option>
+        <option value="4" selected>4/4</option>
+        <option value="5">5/4</option>
+        <option value="6">6/8</option>
+      </select>
+      <button id="tapBtn">Tap tempo</button>
+    </div>
+    <button class="mic" id="mGo">▶ Iniciar</button>
   </div>
 </div>
 
@@ -322,6 +364,67 @@
   }
   $('micBtn').onclick = () => live ? stop() : start();
 
+
+  // ---- Metrónomo
+  const M = {bpm:100, beats:4, on:false, next:0, beat:0, timer:null, taps:[]};
+  function setBpm(v){
+    const b = M.bpm = Math.max(30, Math.min(240, Math.round(v)));
+    $('bpmV').textContent = b; $('bpmR').value = b;
+    $('bpmName').textContent = b < 60 ? 'Largo' : b < 76 ? 'Adagio' : b < 108 ? 'Andante' : b < 120 ? 'Moderato' : b < 168 ? 'Allegro' : 'Presto';
+  }
+  function drawDots(){
+    const d = $('dots'); d.innerHTML = '';
+    for (let i = 0; i < M.beats; i++) { const e = document.createElement('i'); if (i === 0) e.className = 'acc'; d.appendChild(e); }
+  }
+  function flash(i){ [...$('dots').children].forEach((e, k) => e.classList.toggle('on', k === i)); }
+  function clickAt(t, acc){
+    const c = actx, o = c.createOscillator(), g = c.createGain();
+    o.frequency.value = acc ? 1500 : 1000;
+    g.gain.setValueAtTime(.0001, t);
+    g.gain.exponentialRampToValueAtTime(.7, t + .002);
+    g.gain.exponentialRampToValueAtTime(.0001, t + .06);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + .07);
+  }
+  function sched(){
+    while (M.next < actx.currentTime + .12) {
+      const b = M.beat;
+      clickAt(M.next, b === 0);
+      setTimeout(() => { if (M.on) flash(b); }, Math.max(0, (M.next - actx.currentTime) * 1000));
+      M.next += 60 / M.bpm; M.beat = (M.beat + 1) % M.beats;
+    }
+  }
+  function mStart(){
+    const c = ensureCtx();
+    M.beat = 0; M.next = c.currentTime + .06; M.on = true;
+    M.timer = setInterval(sched, 25); sched();
+    $('mGo').textContent = '⏹ Detener'; $('mGo').classList.add('live');
+  }
+  function mStop(){
+    clearInterval(M.timer); M.on = false; flash(-1);
+    $('mGo').textContent = '▶ Iniciar'; $('mGo').classList.remove('live');
+  }
+  $('mGo').onclick = () => M.on ? mStop() : mStart();
+  $('bpmDn10').onclick = () => setBpm(M.bpm - 10);
+  $('bpmDn').onclick = () => setBpm(M.bpm - 1);
+  $('bpmUp').onclick = () => setBpm(M.bpm + 1);
+  $('bpmUp10').onclick = () => setBpm(M.bpm + 10);
+  $('bpmR').oninput = e => setBpm(+e.target.value);
+  $('beats').onchange = e => { M.beats = +e.target.value; M.beat = 0; drawDots(); };
+  $('tapBtn').onclick = () => {
+    const n = performance.now();
+    if (M.taps.length && n - M.taps[M.taps.length - 1] > 2000) M.taps = [];
+    M.taps = M.taps.concat(n).slice(-6);
+    if (M.taps.length > 1) setBpm(60000 * (M.taps.length - 1) / (M.taps[M.taps.length - 1] - M.taps[0]));
+  };
+  document.querySelectorAll('#viewSeg button').forEach(b => b.onclick = () => {
+    const metro = b.dataset.v === 'metro';
+    document.querySelectorAll('#viewSeg button').forEach(x => x.classList.toggle('on', x === b));
+    $('tunerView').style.display = metro ? 'none' : '';
+    $('metroView').style.display = metro ? '' : 'none';
+    if (metro && live) stop();
+    if (!metro && M.on) mStop();
+  });
+  drawDots(); setBpm(100);
   renderStrings();
 })();
 </script>
