@@ -33,6 +33,11 @@
   .note{font-size:72px;font-weight:700;line-height:1;transition:color .15s}
   .note sub{font-size:24px;font-weight:500;color:var(--mut);vertical-align:baseline;margin-left:2px}
   .es{color:var(--mut);font-size:13px;height:18px}
+  .lights{display:flex;justify-content:center;align-items:center;gap:16px;margin:6px 0 2px}
+  .lights i{display:block;width:34px;height:34px;border-radius:50%;background:#2a2f3a;border:2px solid #3a4150;transition:background .12s,box-shadow .12s,border-color .12s}
+  .lights i.mid{width:42px;height:42px}
+  .lights i.on.r{background:#ff4d4d;border-color:#ff8a8a;box-shadow:0 0 16px 4px rgba(255,77,77,.6)}
+  .lights i.on.g{background:#3ddc84;border-color:#9af0bd;box-shadow:0 0 18px 5px rgba(61,220,132,.65)}
   svg{width:100%;height:auto;display:block;margin:2px 0}
   .needle{transform-origin:150px 140px;transition:transform .12s linear}
   .info{display:flex;justify-content:space-around;color:var(--mut);font-size:14px}
@@ -92,6 +97,9 @@
   <div class="meter">
     <div class="note" id="note" style="color:var(--mut)">–</div>
     <div class="es" id="es"></div>
+    <div class="lights" id="lights" role="img" aria-label="Indicador de afinación">
+      <i class="r" id="lL" title="Baja"></i><i class="g mid" id="lG" title="Afinada"></i><i class="r" id="lR" title="Alta"></i>
+    </div>
     <svg viewBox="0 0 300 160" aria-hidden="true">
       <path d="M 20 140 A 130 130 0 0 1 280 140" fill="none" stroke="#2a2f3a" stroke-width="10" stroke-linecap="round"/>
       <path id="okArc" fill="none" stroke="#3ddc84" stroke-width="10" stroke-linecap="round"/>
@@ -317,11 +325,15 @@
   }
 
   // ---- Medidor
+  function setLights(l, g, r){
+    $('lL').classList.toggle('on', !!l); $('lG').classList.toggle('on', !!g); $('lR').classList.toggle('on', !!r);
+  }
   function reset(){
     targetIdx = -1; markStrings();
     $('note').textContent = '–'; $('note').style.color = 'var(--mut)';
     $('es').textContent = ''; $('hz').textContent = '– Hz'; $('tgt').textContent = '– Hz'; $('cents').textContent = '– ¢';
     $('needle').style.transform = 'rotate(0deg)';
+    setLights(0, 0, 0);
     if (live) $('hint').textContent = 'Toque una cuerda…';
   }
   function show(f){
@@ -339,6 +351,7 @@
     const wm = targetM + trans;
     $('note').innerHTML = `${nm(wm)}<sub>${oc(wm)}</sub>`;
     $('note').style.color = col;
+    setLights(cents < -5, ok, cents > 5);
     $('es').textContent = alt(wm) + (trans ? ` · escrita (suena ${nm(targetM)}${oc(targetM)})` : '');
     $('hz').textContent = f.toFixed(1) + ' Hz';
     $('tgt').textContent = mf(targetM).toFixed(1) + ' Hz';
