@@ -122,6 +122,22 @@
 
   <div id="metroView" style="display:none">
     <div class="meter">
+      <svg viewBox="0 0 200 260" style="max-width:210px;margin:0 auto" aria-hidden="true">
+        <defs><linearGradient id="wood" x1="0" x2="1"><stop offset="0" stop-color="#6b4220"/><stop offset=".5" stop-color="#9a6a38"/><stop offset="1" stop-color="#6b4220"/></linearGradient></defs>
+        <path d="M44 244 L156 244 L126 26 L74 26 Z" fill="url(#wood)" stroke="#3b2411" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M91 236 L109 236 L104 40 L96 40 Z" fill="#26170a"/>
+        <g stroke="#d8c39a" stroke-width="1.5" opacity=".7">
+          <line x1="78" y1="80" x2="86" y2="80"/><line x1="78" y1="110" x2="86" y2="110"/><line x1="78" y1="140" x2="86" y2="140"/><line x1="78" y1="170" x2="86" y2="170"/><line x1="78" y1="200" x2="86" y2="200"/>
+          <line x1="114" y1="80" x2="122" y2="80"/><line x1="114" y1="110" x2="122" y2="110"/><line x1="114" y1="140" x2="122" y2="140"/><line x1="114" y1="170" x2="122" y2="170"/><line x1="114" y1="200" x2="122" y2="200"/>
+        </g>
+        <rect x="36" y="244" width="128" height="10" rx="3" fill="#3b2411"/>
+        <g id="pend">
+          <line x1="100" y1="228" x2="100" y2="14" stroke="#dcdcdc" stroke-width="3" stroke-linecap="round"/>
+          <rect id="wt" x="90" y="50" width="20" height="20" rx="3" fill="#d4a73a" stroke="#7a5d12" stroke-width="1.5"/>
+          <circle cx="100" cy="236" r="6" fill="#d4a73a" stroke="#7a5d12" stroke-width="1.5"/>
+        </g>
+        <circle cx="100" cy="228" r="4" fill="#3b2411"/>
+      </svg>
       <div class="bpm" id="bpmV">100</div>
       <div class="es" id="bpmName">Andante</div>
       <div class="dots" id="dots"></div>
@@ -375,7 +391,7 @@
   const M = {bpm:100, beats:4, on:false, next:0, beat:0, timer:null, taps:[]};
   function setBpm(v){
     const b = M.bpm = Math.max(30, Math.min(240, Math.round(v)));
-    $('bpmV').textContent = b; $('bpmR').value = b;
+    $('bpmV').textContent = b; $('bpmR').value = b; wpos();
     $('bpmName').textContent = b < 60 ? 'Largo' : b < 76 ? 'Adagio' : b < 108 ? 'Andante' : b < 120 ? 'Moderato' : b < 168 ? 'Allegro' : 'Presto';
   }
   function drawDots(){
@@ -383,6 +399,15 @@
     for (let i = 0; i < M.beats; i++) { const e = document.createElement('i'); if (i === 0) e.className = 'acc'; d.appendChild(e); }
   }
   function flash(i){ [...$('dots').children].forEach((e, k) => e.classList.toggle('on', k === i)); }
+  const P = {phase:0, raf:0, last:0};
+  function pend(a){ $('pend').setAttribute('transform', 'rotate(' + a + ' 100 228)'); }
+  function wpos(){ $('wt').setAttribute('y', 48 + (M.bpm - 30) / 210 * 140); }
+  function anim(ts){
+    if (!M.on) return;
+    if (P.last) P.phase += (ts - P.last) / 1000 * M.bpm / 60 * Math.PI;
+    P.last = ts; pend(26 * Math.cos(P.phase));
+    P.raf = requestAnimationFrame(anim);
+  }
   function clickAt(t, acc){
     const c = actx, o = c.createOscillator(), g = c.createGain();
     o.frequency.value = acc ? 1500 : 1000;
@@ -394,19 +419,22 @@
   function sched(){
     while (M.next < actx.currentTime + .12) {
       const b = M.beat;
+      const k = M.cnt++;
       clickAt(M.next, b === 0);
-      setTimeout(() => { if (M.on) flash(b); }, Math.max(0, (M.next - actx.currentTime) * 1000));
+      setTimeout(() => { if (M.on) { flash(b); P.phase = k * Math.PI; } }, Math.max(0, (M.next - actx.currentTime) * 1000));
       M.next += 60 / M.bpm; M.beat = (M.beat + 1) % M.beats;
     }
   }
   function mStart(){
     const c = ensureCtx();
-    M.beat = 0; M.next = c.currentTime + .06; M.on = true;
+    M.beat = 0; M.cnt = 0; M.next = c.currentTime + .06; M.on = true;
+    P.phase = 0; P.last = 0; P.raf = requestAnimationFrame(anim);
     M.timer = setInterval(sched, 25); sched();
     $('mGo').textContent = '⏹ Detener'; $('mGo').classList.add('live');
   }
   function mStop(){
     clearInterval(M.timer); M.on = false; flash(-1);
+    cancelAnimationFrame(P.raf); pend(0);
     $('mGo').textContent = '▶ Iniciar'; $('mGo').classList.remove('live');
   }
   $('mGo').onclick = () => M.on ? mStop() : mStart();
