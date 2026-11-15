@@ -253,6 +253,12 @@
     'Trombón / Tuba (Do)':       {trans:0,   refs:[46,58,65]}
   };
   let cat = 'str', trans = 0, shown = false;
+  // Instrumento en afinación, con la preposición ya incluida (para «Acerque el teléfono …»)
+  const DEST = [['Guitarra','a la guitarra'],['Bajo','al bajo'],['Ukelele','al ukelele'],['Violín','al violín'],
+    ['Quena','a la quena'],['Flauta traversa','a la flauta traversa'],['Flauta dulce','a la flauta dulce'],['Oboe','al oboe'],
+    ['Clarinete','al clarinete'],['Trompeta','a la trompeta'],['Saxo alto','al saxo alto'],['Saxo tenor','al saxo tenor'],
+    ['Corno','al corno francés'],['Trombón','al trombón o a la tuba']];
+  const instDest = () => { const v = $('inst').value || ''; const d = DEST.find(x => v.startsWith(x[0])); return d ? d[1] : 'al instrumento'; };
   const hintLive = () => cat === 'wind' ? 'Toque una nota…' : 'Toque una cuerda…';
   const hintIdle = () => cat === 'wind' ? 'Pulse «Escuchar» y toque una nota' : 'Pulse «Escuchar» y toque una cuerda';
   let a4 = 440, mode = 'auto', strings = INSTR[Object.keys(INSTR)[0]];
@@ -480,7 +486,7 @@
     const f = yin(buf, actx.sampleRate);
     const now = performance.now();
     if (lv > 0.0008) quietSince = now;
-    $('msg').textContent = now - quietSince > 4000 ? 'No se capta sonido. Acerque el teléfono a la guitarra y verifique que el micrófono no esté silenciado.' : '';
+    $('msg').textContent = now - quietSince > 4000 ? 'No se capta sonido. Acerque el teléfono ' + instDest() + ' y verifique que el micrófono no esté silenciado.' : '';
     if (f > 0) {
       hist.push(f); if (hist.length > 5) hist.shift();
       const s = [...hist].sort((x, y) => x - y);
