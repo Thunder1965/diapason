@@ -79,6 +79,11 @@
     <select id="inst" aria-label="Instrumento"></select>
   </div>
 
+  <div class="seg" id="notSeg" aria-label="Notación">
+    <button data-n="lat" class="on">Latina (Do Re Mi)</button>
+    <button data-n="ang">Anglosajona (C D E)</button>
+  </div>
+
   <div class="seg" id="modeSeg">
     <button data-m="auto" class="on">Automático</button>
     <button data-m="chrom">Cromático</button>
@@ -197,7 +202,10 @@
   const $ = id => document.getElementById(id);
   const mf = m => a4 * Math.pow(2, (m - 69) / 12);
   const fm = f => 69 + 12 * Math.log2(f / a4);
-  const nm = m => NAMES[((m % 12) + 12) % 12];
+  let lat = true;
+  try { lat = localStorage.getItem('gt_not') !== 'ang'; } catch (e) {}
+  const nm = m => (lat ? ES : NAMES)[((m % 12) + 12) % 12];
+  const alt = m => (lat ? NAMES : ES)[((m % 12) + 12) % 12];
   const oc = m => Math.floor(m / 12) - 1;
 
   // ---- UI inicial
@@ -225,7 +233,15 @@
     if (cat === 'wind') $('strings').style.opacity = 1;
   });
   sel.onchange = applyInstrument;
+  function setNot(l){
+    lat = l;
+    try { localStorage.setItem('gt_not', l ? 'lat' : 'ang'); } catch (e) {}
+    document.querySelectorAll('#notSeg button').forEach(x => x.classList.toggle('on', (x.dataset.n === 'lat') === l));
+    renderStrings(); reset();
+  }
+  document.querySelectorAll('#notSeg button').forEach(b => b.onclick = () => setNot(b.dataset.n === 'lat'));
   fillSelect();
+  document.querySelectorAll('#notSeg button').forEach(x => x.classList.toggle('on', (x.dataset.n === 'lat') === lat));
 
   const ticks = $('ticks');
   for (let c = -50; c <= 50; c += 10) {
@@ -287,7 +303,7 @@
     strings.forEach((m, i) => {
       const b = document.createElement('button');
       const w = m + trans;
-      b.innerHTML = `${nm(w)}<sub style="font-size:11px">${oc(w)}</sub><small>${ES[((w%12)+12)%12]}</small><small>${mf(m).toFixed(1)} Hz</small>`;
+      b.innerHTML = `${nm(w)}<sub style="font-size:11px">${oc(w)}</sub><small>${alt(w)}</small><small>${mf(m).toFixed(1)} Hz</small>`;
       b.dataset.i = i;
       b.onclick = () => playTone(mf(m));
       box.appendChild(b);
@@ -323,7 +339,7 @@
     const wm = targetM + trans;
     $('note').innerHTML = `${nm(wm)}<sub>${oc(wm)}</sub>`;
     $('note').style.color = col;
-    $('es').textContent = ES[((wm % 12) + 12) % 12] + (trans ? ` · escrita (suena ${nm(targetM)}${oc(targetM)})` : '');
+    $('es').textContent = alt(wm) + (trans ? ` · escrita (suena ${nm(targetM)}${oc(targetM)})` : '');
     $('hz').textContent = f.toFixed(1) + ' Hz';
     $('tgt').textContent = mf(targetM).toFixed(1) + ' Hz';
     $('cents').textContent = (cents > 0 ? '+' : '') + cents.toFixed(0) + ' ¢';
