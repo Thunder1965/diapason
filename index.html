@@ -97,9 +97,11 @@
       </g>
       <text x="20" y="158" fill="#8b93a3" font-size="11" text-anchor="middle">♭</text>
       <text x="280" y="158" fill="#8b93a3" font-size="11" text-anchor="middle">♯</text>
+      <text x="150" y="158" fill="#8b93a3" font-size="10" text-anchor="middle">cents (¢)</text>
     </svg>
     <div class="info">
       <span>Frecuencia <b id="hz">– Hz</b></span>
+      <span>Objetivo <b id="tgt">– Hz</b></span>
       <span>Desvío <b id="cents">– ¢</b></span>
     </div>
     <div class="hint" id="hint">Pulse «Escuchar» y toque una cuerda</div>
@@ -233,6 +235,13 @@
     const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     l.setAttribute('x1', x(r1)); l.setAttribute('y1', y(r1)); l.setAttribute('x2', x(r2)); l.setAttribute('y2', y(r2));
     ticks.appendChild(l);
+    if (c % 20 === 0 || Math.abs(c) === 50) {
+      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', 150 + 84 * Math.sin(ang)); t.setAttribute('y', 143 - 84 * Math.cos(ang));
+      t.setAttribute('fill', '#8b93a3'); t.setAttribute('font-size', '9'); t.setAttribute('text-anchor', 'middle'); t.setAttribute('stroke', 'none');
+      t.textContent = c > 0 ? '+' + c : String(c);
+      ticks.appendChild(t);
+    }
   }
   // arco verde ±5 cents
   (function(){
@@ -243,8 +252,8 @@
 
   document.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => { setMode(b.dataset.m); reset(); });
 
-  $('calUp').onclick = () => { a4 = Math.min(450, a4 + 1); $('calV').textContent = a4 + ' Hz'; };
-  $('calDn').onclick = () => { a4 = Math.max(430, a4 - 1); $('calV').textContent = a4 + ' Hz'; };
+  $('calUp').onclick = () => { a4 = Math.min(450, a4 + 1); $('calV').textContent = a4 + ' Hz'; renderStrings(); };
+  $('calDn').onclick = () => { a4 = Math.max(430, a4 - 1); $('calV').textContent = a4 + ' Hz'; renderStrings(); };
 
   // ---- Tonos de referencia
   let actx, tone;
@@ -278,7 +287,7 @@
     strings.forEach((m, i) => {
       const b = document.createElement('button');
       const w = m + trans;
-      b.innerHTML = `${nm(w)}<sub style="font-size:11px">${oc(w)}</sub><small>${ES[((w%12)+12)%12]}</small>`;
+      b.innerHTML = `${nm(w)}<sub style="font-size:11px">${oc(w)}</sub><small>${ES[((w%12)+12)%12]}</small><small>${mf(m).toFixed(1)} Hz</small>`;
       b.dataset.i = i;
       b.onclick = () => playTone(mf(m));
       box.appendChild(b);
@@ -295,7 +304,7 @@
   function reset(){
     targetIdx = -1; markStrings();
     $('note').textContent = '–'; $('note').style.color = 'var(--mut)';
-    $('es').textContent = ''; $('hz').textContent = '– Hz'; $('cents').textContent = '– ¢';
+    $('es').textContent = ''; $('hz').textContent = '– Hz'; $('tgt').textContent = '– Hz'; $('cents').textContent = '– ¢';
     $('needle').style.transform = 'rotate(0deg)';
     if (live) $('hint').textContent = 'Toque una cuerda…';
   }
@@ -316,6 +325,7 @@
     $('note').style.color = col;
     $('es').textContent = ES[((wm % 12) + 12) % 12] + (trans ? ` · escrita (suena ${nm(targetM)}${oc(targetM)})` : '');
     $('hz').textContent = f.toFixed(1) + ' Hz';
+    $('tgt').textContent = mf(targetM).toFixed(1) + ' Hz';
     $('cents').textContent = (cents > 0 ? '+' : '') + cents.toFixed(0) + ' ¢';
     $('hint').textContent = ok ? '✔ Afinada' : cents > 0 ? 'Muy alta: afloje la cuerda' : 'Muy baja: apriete la cuerda';
     $('hint').style.color = col;
