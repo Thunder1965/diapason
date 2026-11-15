@@ -33,6 +33,8 @@
   .note{font-size:72px;font-weight:700;line-height:1;transition:color .15s}
   .note sub{font-size:24px;font-weight:500;color:var(--mut);vertical-align:baseline;margin-left:2px}
   .es{color:var(--mut);font-size:13px;height:18px}
+  .lvl{height:6px;border-radius:3px;background:#2a2f3a;overflow:hidden;margin:8px 0}
+  .lvl i{display:block;height:100%;width:0;background:var(--ok);transition:width .08s linear}
   .lights{display:flex;justify-content:center;align-items:center;gap:48px;margin:0 0 10px}
   .lights i{display:block;width:34px;height:34px;border-radius:50%;background:#2a2f3a;border:2px solid #3a4150;transition:background .12s,box-shadow .12s,border-color .12s}
   .lights i.mid{width:42px;height:42px}
@@ -121,6 +123,7 @@
   </div>
 
   <button class="mic" id="micBtn">🎤 Escuchar</button>
+  <div class="lvl" title="Nivel de entrada del micrófono"><i id="lvlBar"></i></div>
   <div class="msg" id="msg"></div>
 
   <div class="strings" id="strings"></div>
@@ -366,7 +369,7 @@
   function yin(buf, sr){
     const W = buf.length >> 1, d = new Float32Array(W);
     let rms = 0; for (let i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
-    if (Math.sqrt(rms / buf.length) < 0.01) return -1;
+    if (Math.sqrt(rms / buf.length) < 0.0015) return -1;
     for (let tau = 1; tau < W; tau++) {
       let s = 0;
       for (let i = 0; i < W; i++) { const x = buf[i] - buf[i + tau]; s += x * x; }
@@ -377,7 +380,7 @@
     const minT = Math.floor(sr / 2200), maxT = Math.min(W - 2, Math.floor(sr / 25));
     let tau = -1;
     for (let t = minT; t < maxT; t++) {
-      if (d[t] < 0.12) { while (t + 1 < maxT && d[t + 1] < d[t]) t++; tau = t; break; }
+      if (d[t] < 0.15) { while (t + 1 < maxT && d[t + 1] < d[t]) t++; tau = t; break; }
     }
     if (tau < 0) return -1;
     const a = d[tau - 1], b = d[tau], c = d[tau + 1];
@@ -386,26 +389,33 @@
     return sr / (tau + shift);
   }
 
-  let live = false, stream, analyser, raf, buf, hist = [], lastSeen = 0;
+  let live = false, stream, analyser, raf, buf, hist = [], lastSeen = 0, quietSince = 0;
   async function start(){
     $('msg').textContent = '';
     try {
       const c = ensureCtx();
+      if (c.state === 'suspended') await c.resume();
       stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
       const src = c.createMediaStreamSource(stream);
       analyser = c.createAnalyser(); analyser.fftSize = 4096;
       src.connect(analyser);
       buf = new Float32Array(analyser.fftSize);
+      quietSince = performance.now();
       live = true; $('micBtn').textContent = '⏹ Detener'; $('micBtn').classList.add('live');
       $('hint').textContent = 'Toque una cuerda…'; $('hint').style.color = 'var(--txt)';
       loop();
     } catch (e) {
-      $('msg').textContent = 'Micrófono no disponible en esta vista (el entorno lo bloquea o no se concedió permiso). ' +
-        'Abra el archivo en su navegador para usar la detección, o utilice los tonos de referencia tocando cada cuerda.';
+      const n = e && e.name;
+      $('msg').textContent = n === 'NotAllowedError' || n === 'SecurityError'
+        ? 'Permiso de micrófono denegado. Active el micrófono para este sitio en los ajustes del navegador y vuelva a pulsar «Escuchar».'
+        : n === 'NotFoundError' || n === 'OverconstrainedError'
+        ? 'No se encontró un micrófono en este dispositivo.'
+        : 'No fue posible acceder al micrófono (' + (n || 'error') + '). Cierre otras aplicaciones que lo usen y reintente.';
     }
   }
   function stop(){
     live = false; cancelAnimationFrame(raf);
+    $('lvlBar').style.width = '0'; $('msg').textContent = '';
     if (stream) stream.getTracks().forEach(t => t.stop());
     $('micBtn').textContent = '🎤 Escuchar'; $('micBtn').classList.remove('live');
     $('hint').textContent = 'Pulse «Escuchar» y toque una cuerda'; $('hint').style.color = 'var(--txt)';
@@ -414,8 +424,13 @@
   function loop(){
     if (!live) return;
     analyser.getFloatTimeDomainData(buf);
+    let e2 = 0; for (let i = 0; i < buf.length; i++) e2 += buf[i] * buf[i];
+    const lv = Math.sqrt(e2 / buf.length);
+    $('lvlBar').style.width = Math.min(100, Math.sqrt(lv) * 220) + '%';
     const f = yin(buf, actx.sampleRate);
     const now = performance.now();
+    if (lv > 0.0008) quietSince = now;
+    $('msg').textContent = now - quietSince > 4000 ? 'No se capta sonido. Acerque el teléfono a la guitarra y verifique que el micrófono no esté silenciado.' : '';
     if (f > 0) {
       hist.push(f); if (hist.length > 5) hist.shift();
       const s = [...hist].sort((x, y) => x - y);
