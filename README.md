@@ -7,4 +7,4 @@ Afinador y metrónomo para el teléfono, hecho como aplicación web instalable (
 - Metrónomo mecánico con tap tempo.
 - Funciona sin conexión una vez instalada.
 
-Sitio: https://thunder1965.github.io/guitartune/
+Sitio: https://thunder1965.github.io/diapason/
