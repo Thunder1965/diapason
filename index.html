@@ -441,7 +441,7 @@
       hist.push(f); if (hist.length > 5) hist.shift();
       const s = [...hist].sort((x, y) => x - y);
       show(s[s.length >> 1]); lastSeen = now;
-    } else if (now - lastSeen > 700) {
+    } else if (now - lastSeen > 2000) {
       hist = [];
       if (shown) { reset(); $('hint').style.color = 'var(--txt)'; }
     }
