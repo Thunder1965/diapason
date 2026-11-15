@@ -250,6 +250,8 @@
     'Trombón / Tuba (Do)':       {trans:0,   refs:[46,58,65]}
   };
   let cat = 'str', trans = 0, shown = false;
+  const hintLive = () => cat === 'wind' ? 'Toque una nota…' : 'Toque una cuerda…';
+  const hintIdle = () => cat === 'wind' ? 'Pulse «Escuchar» y toque una nota' : 'Pulse «Escuchar» y toque una cuerda';
   let a4 = 440, mode = 'auto', strings = INSTR[Object.keys(INSTR)[0]];
   const $ = id => document.getElementById(id);
   const mf = m => a4 * Math.pow(2, (m - 69) / 12);
@@ -379,7 +381,7 @@
     $('es').textContent = ''; $('hz').textContent = '– Hz'; $('tgt').textContent = '– Hz'; $('cents').textContent = '– ¢';
     $('needle').style.transform = 'rotate(-90deg)';
     setLights(0, 0, 0);
-    if (live) $('hint').textContent = 'Toque una cuerda…';
+    $('hint').textContent = live ? hintLive() : hintIdle(); $('hint').style.color = 'var(--txt)';
   }
   function show(f){
     let m, targetM;
@@ -403,7 +405,7 @@
     $('hz').textContent = f.toFixed(1) + ' Hz';
     $('tgt').textContent = mf(targetM).toFixed(1) + ' Hz';
     $('cents').textContent = (cents > 0 ? '+' : '') + cents.toFixed(0) + ' ¢';
-    $('hint').textContent = ok ? '✔ Afinada' : cents > 0 ? 'Muy alta: afloje la cuerda' : 'Muy baja: apriete la cuerda';
+    $('hint').textContent = ok ? '✔ Afinada' : cents > 0 ? (cat === 'wind' ? 'Nota alta: baje el tono' : 'Muy alta: afloje la cuerda') : (cat === 'wind' ? 'Nota baja: suba el tono' : 'Muy baja: apriete la cuerda');
     $('hint').style.color = col;
     if (ok && mode === 'auto' && targetIdx >= 0) doneSet.add(targetIdx);
     markStrings();
@@ -446,7 +448,7 @@
       buf = new Float32Array(analyser.fftSize);
       quietSince = performance.now();
       live = true; $('micBtn').textContent = '⏹ Detener'; $('micBtn').classList.add('live');
-      $('hint').textContent = 'Toque una cuerda…'; $('hint').style.color = 'var(--txt)';
+      $('hint').textContent = hintLive(); $('hint').style.color = 'var(--txt)';
       loop();
     } catch (e) {
       const n = e && e.name;
@@ -462,7 +464,7 @@
     $('lvlBar').style.width = '0'; $('msg').textContent = '';
     if (stream) stream.getTracks().forEach(t => t.stop());
     $('micBtn').textContent = '🎤 Escuchar'; $('micBtn').classList.remove('live');
-    $('hint').textContent = 'Pulse «Escuchar» y toque una cuerda'; $('hint').style.color = 'var(--txt)';
+    $('hint').textContent = hintIdle(); $('hint').style.color = 'var(--txt)';
     reset();
   }
   function loop(){
