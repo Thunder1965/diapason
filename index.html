@@ -33,7 +33,7 @@
   .note{font-size:72px;font-weight:700;line-height:1;transition:color .15s}
   .note sub{font-size:24px;font-weight:500;color:var(--mut);vertical-align:baseline;margin-left:2px}
   .es{color:var(--mut);font-size:13px;height:18px}
-  .lights{display:flex;justify-content:center;align-items:center;gap:16px;margin:6px 0 2px}
+  .lights{display:flex;justify-content:center;align-items:center;gap:48px;margin:0 0 10px}
   .lights i{display:block;width:34px;height:34px;border-radius:50%;background:#2a2f3a;border:2px solid #3a4150;transition:background .12s,box-shadow .12s,border-color .12s}
   .lights i.mid{width:42px;height:42px}
   .lights i.on.r{background:#ff4d4d;border-color:#ff8a8a;box-shadow:0 0 16px 4px rgba(255,77,77,.6)}
@@ -95,11 +95,11 @@
   </div>
 
   <div class="meter">
-    <div class="note" id="note" style="color:var(--mut)">–</div>
-    <div class="es" id="es"></div>
     <div class="lights" id="lights" role="img" aria-label="Indicador de afinación">
       <i class="r" id="lL" title="Baja"></i><i class="g mid" id="lG" title="Afinada"></i><i class="r" id="lR" title="Alta"></i>
     </div>
+    <div class="note" id="note" style="color:var(--mut)">–</div>
+    <div class="es" id="es"></div>
     <svg viewBox="0 0 300 160" aria-hidden="true">
       <path d="M 20 140 A 130 130 0 0 1 280 140" fill="none" stroke="#2a2f3a" stroke-width="10" stroke-linecap="round"/>
       <path id="okArc" fill="none" stroke="#3ddc84" stroke-width="10" stroke-linecap="round"/>
