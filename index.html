@@ -46,7 +46,9 @@
   .info b{color:var(--txt);font-variant-numeric:tabular-nums}
   .hint{font-size:15px;height:22px;margin-top:6px;font-weight:600}
   .strings{display:grid;grid-template-columns:repeat(auto-fit,minmax(56px,1fr));gap:8px;margin-bottom:12px}
-  .strings button{padding:12px 0;font-size:18px;font-weight:700}
+  .strings button{position:relative;padding:12px 0;font-size:18px;font-weight:700}
+  .strings button .sn{position:absolute;top:3px;left:5px;font-style:normal;font-size:11px;font-weight:700;color:var(--acc)}
+  .strnum{height:24px;margin-top:4px;font-size:16px;font-weight:700;color:var(--txt)}
   .strings button small{display:block;font-weight:400;color:var(--mut);font-size:11px}
   .strings button.target{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc) inset}
   .strings button.done{border-color:var(--ok);color:var(--ok)}
@@ -102,6 +104,7 @@
     </div>
     <div class="note" id="note" style="color:var(--mut)">–</div>
     <div class="es" id="es"></div>
+    <div class="strnum" id="strNum"></div>
     <svg viewBox="0 0 300 160" aria-hidden="true">
       <path d="M 20 140 A 130 130 0 0 1 280 140" fill="none" stroke="#2a2f3a" stroke-width="10" stroke-linecap="round"/>
       <path id="okArc" fill="none" stroke="#3ddc84" stroke-width="10" stroke-linecap="round"/>
@@ -208,7 +211,7 @@
     'Corno francés en Fa':       {trans:7,   refs:[60,67,72]},
     'Trombón / Tuba (Do)':       {trans:0,   refs:[46,58,65]}
   };
-  let cat = 'str', trans = 0;
+  let cat = 'str', trans = 0, shown = false;
   let a4 = 440, mode = 'auto', strings = INSTR[Object.keys(INSTR)[0]];
   const $ = id => document.getElementById(id);
   const mf = m => a4 * Math.pow(2, (m - 69) / 12);
@@ -314,9 +317,9 @@
     strings.forEach((m, i) => {
       const b = document.createElement('button');
       const w = m + trans;
-      b.innerHTML = `${nm(w)}<sub style="font-size:11px">${oc(w)}</sub><small>${alt(w)}</small><small>${mf(m).toFixed(1)} Hz</small>`;
+      b.innerHTML = `${cat === 'wind' ? '' : '<em class="sn">' + (strings.length - i) + '</em>'}${nm(w)}<sub style="font-size:11px">${oc(w)}</sub><small>${alt(w)}</small><small>${mf(m).toFixed(1)} Hz</small>`;
       b.dataset.i = i;
-      b.onclick = () => playTone(mf(m));
+      b.onclick = () => { if (cat !== 'wind') $('strNum').textContent = 'Cuerda ' + (strings.length - i); playTone(mf(m)); };
       box.appendChild(b);
     });
   }
@@ -334,6 +337,7 @@
   function reset(){
     targetIdx = -1; markStrings();
     $('note').textContent = '–'; $('note').style.color = 'var(--mut)';
+    shown = false; $('strNum').textContent = '';
     $('es').textContent = ''; $('hz').textContent = '– Hz'; $('tgt').textContent = '– Hz'; $('cents').textContent = '– ¢';
     $('needle').style.transform = 'rotate(-90deg)';
     setLights(0, 0, 0);
@@ -355,6 +359,8 @@
     $('note').innerHTML = `${nm(wm)}<sub>${oc(wm)}</sub>`;
     $('note').style.color = col;
     setLights(cents < -5, ok, cents > 5);
+    shown = true;
+    $('strNum').textContent = (mode === 'auto' && cat !== 'wind' && targetIdx >= 0) ? 'Cuerda ' + (strings.length - targetIdx) : '';
     $('es').textContent = alt(wm) + (trans ? ` · escrita (suena ${nm(targetM)}${oc(targetM)})` : '');
     $('hz').textContent = f.toFixed(1) + ' Hz';
     $('tgt').textContent = mf(targetM).toFixed(1) + ' Hz';
@@ -435,7 +441,10 @@
       hist.push(f); if (hist.length > 5) hist.shift();
       const s = [...hist].sort((x, y) => x - y);
       show(s[s.length >> 1]); lastSeen = now;
-    } else if (now - lastSeen > 1200) { hist = []; }
+    } else if (now - lastSeen > 700) {
+      hist = [];
+      if (shown) { reset(); $('hint').style.color = 'var(--txt)'; }
+    }
     raf = requestAnimationFrame(loop);
   }
   $('micBtn').onclick = () => live ? stop() : start();
