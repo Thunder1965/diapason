@@ -96,6 +96,9 @@
   .strings button{padding:6px 0;font-size:16px;line-height:1.25}
   .strings button small{font-size:9.5px;line-height:1.25;white-space:nowrap}
   .strings button sub{font-size:10px}
+  .strings.many{gap:3px}
+  .strings.many button{font-size:13px}
+  .strings.many button small{font-size:8.5px}
   .cal{font-size:13px}
   .cal button{padding:3px 12px}
   .bpm{font-size:clamp(44px,8dvh,64px)}
@@ -238,7 +241,7 @@
   };
   // Viento: trans = semitonos entre nota escrita e nota real (concierto); refs = notas escritas de referencia
   const WIND = {
-    'Quena (Sol)':               {trans:0,   refs:[67,74,79]},
+    'Quena en Sol mayor':        {trans:0,   refs:[67,69,71,72,74,76,78,79]},
     'Flauta traversa (Do)':      {trans:0,   refs:[60,67,72]},
     'Flauta dulce soprano':      {trans:-12, refs:[72,79,84]},
     'Oboe (Do)':                 {trans:0,   refs:[57,69,81]},
@@ -353,6 +356,7 @@
   const doneSet = new Set();
   function renderStrings(){
     const box = $('strings'); box.innerHTML = '';
+    box.classList.toggle('many', strings.length > 7);
     doneSet.clear(); targetIdx = -1;
     strings.forEach((m, i) => {
       const b = document.createElement('button');
